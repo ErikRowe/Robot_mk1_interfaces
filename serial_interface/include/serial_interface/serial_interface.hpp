@@ -14,7 +14,7 @@ private:
 
     void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
     std::array<int,10> calculate_engines();
-    void send_serial(std::array<int,10> *message_)
+    void send_serial(std::array<int,10> *message_);
 
     
 public:

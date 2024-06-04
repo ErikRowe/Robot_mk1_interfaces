@@ -28,6 +28,15 @@ SerialInterface::SerialInterface() : Node("serial_interface_node")
 
         joystick_subscription_ = this->create_subscription<sensor_msgs::msg::Joy>(
             "joy", 10, std::bind(&SerialInterface::joy_callback, this, std::placeholders::_1));
+
+        //delete later
+        int start_position[10]={90,180,25,155,55,
+                        90,15,140,25,105};
+
+        int bytes_written = sp_nonblocking_write(serial_port_, start_position, 10);
+        if (bytes_written != 10) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to write data to serial port.");
+        }
     }
 
 void SerialInterface::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
