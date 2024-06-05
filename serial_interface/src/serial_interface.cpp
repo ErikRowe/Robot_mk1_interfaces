@@ -3,6 +3,7 @@
 SerialInterface::SerialInterface() : Node("serial_interface_node")
     {
         this->declare_parameter<std::string>("port", "/dev/ttyUSB0");
+<<<<<<< HEAD
         this->declare_parameter<int>("baudrate", 115200);
 
         std::string port = this->get_parameter("port").as_string();
