@@ -1,22 +1,37 @@
-#include <libserialport.h>
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <array>
-
+#include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
+#include <cstring>
+#include <cerrno>
 
 class SerialInterface : public rclcpp::Node
 {
 private:
-    std::array<int,10> message_to_send;
-    struct sp_port *serial_port_ = nullptr;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joystick_subscription_;
 
+    // Port
+    int serial_port = open("/dev/ttyUSB0", O_RDWR);
 
+
+    // Functions
     void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
-    std::array<int,10> calculate_engines();
-    void send_serial(std::array<int,10> *message_);
+    void write_serial();
+    void close_serial();
 
+    
+
+    int start_position[11]={0,90,180,25,155,55,     // For testing  
+                        90,15,140,25,105};          // For testing
+    int new_position[11] = {1,90, 180-10, 25, 155, 55,
+                            90, 15+10, 140, 25, 105}; 
+    int set_point[11];
     
 public:
     SerialInterface();
+    ~SerialInterface();
 };
