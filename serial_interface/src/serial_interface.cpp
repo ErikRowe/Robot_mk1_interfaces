@@ -2,8 +2,8 @@
 
 SerialInterface::SerialInterface() : Node("serial_interface_node")
     {
-        this->declare_parameter<std::string>("port", "/dev/ttyS0");
-        this->declare_parameter<int>("baudrate", 9600);
+        this->declare_parameter<std::string>("port", "/dev/ttyUSB0");
+        this->declare_parameter<int>("baudrate", 115200);
 
         std::string port = this->get_parameter("port").as_string();
         int baudrate = this->get_parameter("baudrate").as_int();
@@ -31,11 +31,11 @@ SerialInterface::SerialInterface() : Node("serial_interface_node")
 
         //delete later
         int start_position[10]={90,180,25,155,55,
-                        90,15,140,25,105};
+                        90,15,140,25,105};        
 
-        int bytes_written = sp_nonblocking_write(serial_port_, start_position, 10);
+        int bytes_written = sp_nonblocking_write(serial_port_, start_position, 20);
         if (bytes_written != 10) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to write data to serial port.");
+            RCLCPP_INFO(this->get_logger(), "Failed to write data to serial port.");
         }
     }
 
