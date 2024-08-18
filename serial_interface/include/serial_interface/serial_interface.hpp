@@ -26,8 +26,6 @@ private:
 
     
 
-    int start_position[11]={0,90,180,25,155,55,     // For testing  
-                        90,15,140,25,105};          // For testing
     int new_position[11] = {1,90, 180-10, 25, 155, 55,
                             90, 15+10, 140, 25, 105}; 
     int set_point[11];
