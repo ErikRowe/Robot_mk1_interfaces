@@ -18,6 +18,8 @@ private:
     // Port
     int serial_port = open("/dev/ttyUSB0", O_RDWR);
 
+    // Port
+    int serial_port = open("/dev/ttyUSB0", O_RDWR);
 
     // Functions
     void motors_array_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
