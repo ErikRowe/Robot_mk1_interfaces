@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 
 if(BUILD_TESTING)
@@ -34,7 +35,7 @@ add_executable(serial_interface
   src/serial_interface.cpp
 )
 
-ament_target_dependencies(serial_interface rclcpp sensor_msgs)
+ament_target_dependencies(serial_interface rclcpp sensor_msgs std_msgs)
 target_link_libraries(serial_interface serialport ${GST_LIBRARIES})
 
 install(

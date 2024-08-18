@@ -1,58 +1,90 @@
 #include <serial_interface.hpp>
 
 SerialInterface::SerialInterface() : Node("serial_interface_node")
+    {      
+        motors_array_ = this->create_subscription<std_msgs::msg::Int32MultiArray>(
+            "motors_array", 10, std::bind(&SerialInterface::motors_array_callback, this, std::placeholders::_1));
+
+        write_serial();  
+    }
+
+void SerialInterface::motors_array_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg)
     {
-        this->declare_parameter<std::string>("port", "/dev/ttyUSB0");
-        this->declare_parameter<int>("baudrate", 9600);
-
-        std::string port = this->get_parameter("port").as_string();
-        int baudrate = this->get_parameter("baudrate").as_int();
-
-        sp_return result = sp_get_port_by_name(port.c_str(), &serial_port_);
-        if (result != SP_OK) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to find serial port: %s", port.c_str());
+        if (msg->data.size() == 0) {
+            RCLCPP_WARN(this->get_logger(), "Received motors_array is empty.");
             return;
-        }
-
-        result = sp_open(serial_port_, SP_MODE_WRITE);
-        if (result != SP_OK) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to open serial port: %s", port.c_str());
-            return;
-        }
-
-        sp_set_baudrate(serial_port_, baudrate);
-        sp_set_bits(serial_port_, 8);
-        sp_set_parity(serial_port_, SP_PARITY_NONE);
-        sp_set_stopbits(serial_port_, 1);
-        sp_set_flowcontrol(serial_port_, SP_FLOWCONTROL_NONE);
-
-        joystick_subscription_ = this->create_subscription<sensor_msgs::msg::Joy>(
-            "joy", 10, std::bind(&SerialInterface::joy_callback, this, std::placeholders::_1));
-
-        //delete later
-        int start_position[10]={90,180,25,155,55,
-                        90,15,140,25,105};
-
-        int bytes_written = sp_nonblocking_write(serial_port_, start_position, 10);
-        if (bytes_written != 10) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to write data to serial port.");
         }
     }
 
-void SerialInterface::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
-    {
-        if (msg->axes.size() < 10) {
-            RCLCPP_WARN(this->get_logger(), "Received joystick message with less than 10 axes.");
-            return;
-        }
-
-        uint8_t data[10];
-        for (size_t i = 0; i < 10; ++i) {
-            data[i] = static_cast<uint8_t>(msg->axes[i] * 255); // Scaling joystick value to 0-255
-        }
-
-        int bytes_written = sp_nonblocking_write(serial_port_, data, 10);
-        if (bytes_written != 10) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to write data to serial port.");
-        }
+void SerialInterface::write_serial() {
+    // Check for errors
+    if (serial_port < 0) {
+        RCLCPP_ERROR(this->get_logger(), "Error %d opening %s: %s", errno, "/dev/ttyUSB0", strerror(errno));
+        return;
     }
+
+    // Configure serial port
+    struct termios tty;
+    memset(&tty, 0, sizeof tty);
+
+    // Read in existing settings, and handle any error
+    if (tcgetattr(serial_port, &tty) != 0) {
+        RCLCPP_ERROR(this->get_logger(), "Error %d from tcgetattr: %s", errno, strerror(errno));
+        return;
+    }
+
+    // Set Baud Rate
+    cfsetospeed(&tty, B115200);
+    cfsetispeed(&tty, B115200);
+
+    // Setting other Port Stuff
+    tty.c_cflag &= ~PARENB; // Make 8n1
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+
+    tty.c_cflag &= ~CRTSCTS; // No flow control
+    tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
+
+    tty.c_lflag &= ~ICANON;
+    tty.c_lflag &= ~ECHO; // Disable echo
+    tty.c_lflag &= ~ECHOE; // Disable erasure
+    tty.c_lflag &= ~ECHONL; // Disable new-line echo
+    tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | ICRNL | IGNCR); // Disable any special handling of received bytes
+
+    tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+    tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+    // tty.c_oflag &= ~OCRNL;
+
+    // Set in/out baud rate to be 115200
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
+
+    // Save tty settings, also checking for error
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
+        RCLCPP_ERROR(this->get_logger(), "Error %d from tcsetattr: %s", errno, strerror(errno));
+        return;
+    }
+
+    // Write to serial port
+    for (int i = 0; i < 11; ++i) {
+        int16_t value = new_position[i];
+        uint8_t bytes[2];
+        bytes[0] = value & 0xFF;
+        bytes[1] = (value >> 8) & 0xFF;
+        write(serial_port, bytes, 2);
+    }
+    return;
+}
+
+SerialInterface::~SerialInterface(){
+    close_serial();
+}
+
+void SerialInterface::close_serial() {
+    // Close the serial port
+    close(serial_port);
+    return;
+}
